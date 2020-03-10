@@ -1,0 +1,8 @@
+{
+    mtimes = {
+        ["xmake.lua"] = 1583767905
+    },
+    options_all = { },
+    __version = "2.2.9",
+    options_gobang_server = ref("options_all")
+}

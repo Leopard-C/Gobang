@@ -1,0 +1,13 @@
+{
+    find_program = {
+        ccache = false,
+        ["/usr/bin/gcc"] = "/usr/bin/gcc"
+    },
+    find_programver = {
+        ["/usr/bin/gcc"] = "5.4.0-6ubuntu1~16.04.12)"
+    },
+    __version = "2.2.9",
+    ["lib.detect.has_flags"] = {
+        ["linux_x86_64_/usr/bin/gcc_5.4.0-6ubuntu1~16.04.12)_cxx_cxflags__-MMD -MF"] = true
+    }
+}
