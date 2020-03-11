@@ -2,15 +2,16 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+
 #include "jsoncpp/json/json_features.h"
 #include "jsoncpp/json/writer.h"
 
 
-bool sendJsonMsg(const Json::Value& jsonMsg, int fd) {
+bool sendJsonMsg(const Json::Value& jsonMsg, SocketFD fd) {
     return sendJsonMsg(Json::FastWriter().write(jsonMsg), fd);
 }
 
-bool sendJsonMsg(const std::string& msg, int fd) {
+bool sendJsonMsg(const std::string& msg, SocketFD fd) {
     if (msg.empty())
         return false;
 
@@ -35,7 +36,7 @@ bool sendJsonMsg(const std::string& msg, int fd) {
 }
 
 
-int recvJsonMsg(Json::Value& root, int fd) {
+int recvJsonMsg(Json::Value& root, SocketFD fd) {
     char temp[8] = { 0 };
     char lengthStr[5] = { 0 };
     char msgLengthInfo[13] = { 0 };
@@ -84,3 +85,12 @@ int recvJsonMsg(Json::Value& root, int fd) {
     delete[] jsonMsg;
     return ret;
 }
+
+void closeSocket(SocketFD fd) {
+#ifdef _WIN32
+    closesocket(fd);
+#else
+    close (fd);
+#endif
+}
+

@@ -9,13 +9,13 @@ namespace API {
 
 /***********************
  * Local functions
-***********************/ static bool sendSimpleCmd(int fd, const std::string& cmd) { Json::Value root;
+***********************/ static bool sendSimpleCmd(SocketFD fd, const std::string& cmd) { Json::Value root;
     root["type"] = "command";
     root["cmd"] = cmd;
     return sendJsonMsg(root, fd);
 }
 
-static bool sendSimpleRes(int fd, const std::string& res_cmd,
+static bool sendSimpleRes(SocketFD fd, const std::string& res_cmd,
         int status_code, const std::string desc) {
     Json::Value root;
     root["type"] = "response";
@@ -25,7 +25,7 @@ static bool sendSimpleRes(int fd, const std::string& res_cmd,
     return sendJsonMsg(root, fd);
 }
 
-static bool sendSimpleNotify(int fd, const std::string& sub_type) {
+static bool sendSimpleNotify(SocketFD fd, const std::string& sub_type) {
     Json::Value root;
     root["type"] = "notify";
     root["sub_type"] = sub_type;
@@ -50,7 +50,7 @@ bool isTypeNotify(const Json::Value& root, const std::string& sub_type) {
 /**************************************
  * Just forward to the other player 
 **************************************/
-bool forward(int fd, const Json::Value& root) {
+bool forward(SocketFD fd, const Json::Value& root) {
     return sendJsonMsg(root, fd);
 }
 
@@ -58,7 +58,7 @@ bool forward(int fd, const Json::Value& root) {
 /***********************
  * Type: Response 
 ***********************/
-bool responseCreateRoom(int fd, int status_code, const std::string& desc, int room_id) {
+bool responseCreateRoom(SocketFD fd, int status_code, const std::string& desc, int room_id) {
     Json::Value root;
     root["type"] =  "response";
     root["res_cmd"] = "create_room";
@@ -68,7 +68,7 @@ bool responseCreateRoom(int fd, int status_code, const std::string& desc, int ro
     return sendJsonMsg(root, fd);
 }
 
-bool responseJoinRoom(int fd, int status_code, const std::string &desc,
+bool responseJoinRoom(SocketFD fd, int status_code, const std::string &desc,
         const std::string room_name, const std::string rival_name) {
     Json::Value root;
     root["type"] = "response";
@@ -80,7 +80,7 @@ bool responseJoinRoom(int fd, int status_code, const std::string &desc,
     return sendJsonMsg(root, fd);
 }
 
-bool responseWatchRoom(int fd, int status_code, const std::string& desc,
+bool responseWatchRoom(SocketFD fd, int status_code, const std::string& desc,
         const std::string room_name) {
     Json::Value root;
     root["type"] = "response";
@@ -91,7 +91,7 @@ bool responseWatchRoom(int fd, int status_code, const std::string& desc,
     return sendJsonMsg(root, fd);
 }
 
-bool responsePrepare(int fd, int status_code, const std::string& desc) {
+bool responsePrepare(SocketFD fd, int status_code, const std::string& desc) {
     return sendSimpleRes(fd, "prepare", status_code, desc);
 }
 
@@ -99,7 +99,7 @@ bool responsePrepare(int fd, int status_code, const std::string& desc) {
 /*************************
  * Type: Notify
 *************************/
-bool sendChessBoard(int fd, int chessPieces[][15], ChessPieceInfo last_piece) {
+bool sendChessBoard(SocketFD fd, int chessPieces[][15], ChessPieceInfo last_piece) {
     Json::Value root;
     Json::Value chessboard;
     Json::Value lastChess;
@@ -121,7 +121,7 @@ bool sendChessBoard(int fd, int chessPieces[][15], ChessPieceInfo last_piece) {
     return sendJsonMsg(root, fd);
 }
 
-bool notifyRivalInfo(int fd, const std::string& player_name) {
+bool notifyRivalInfo(SocketFD fd, const std::string& player_name) {
     Json::Value root;
     root["type"] = "notify";
     root["sub_type"] = "rival_info";
@@ -129,7 +129,7 @@ bool notifyRivalInfo(int fd, const std::string& player_name) {
     return sendJsonMsg(root, fd);
 }
 
-bool notifyNewPiece(int fd, int row, int col, int chess_type) {
+bool notifyNewPiece(SocketFD fd, int row, int col, int chess_type) {
     Json::Value root;
     root["type"] = "notify";
     root["sub_type"] = "new_piece";
@@ -139,15 +139,15 @@ bool notifyNewPiece(int fd, int row, int col, int chess_type) {
     return sendJsonMsg(root, fd);
 }
 
-bool notifyGameStart(int fd) {
+bool notifyGameStart(SocketFD fd) {
     return sendSimpleNotify(fd, "game_start");
 }
 
-bool notifyGameCancelPrepare(int fd) {
+bool notifyGameCancelPrepare(SocketFD fd) {
     return sendSimpleNotify(fd, "cancel_prepare");
 }
 
-bool notifyDisconnect(int fd, const std::string& player_name) {
+bool notifyDisconnect(SocketFD fd, const std::string& player_name) {
     Json::Value root;
     root["type"] = "notify";
     root["sub_type"] = "disconnect";
@@ -155,7 +155,7 @@ bool notifyDisconnect(int fd, const std::string& player_name) {
     return sendJsonMsg(root, fd);
 }
 
-bool notifyPlayerInfo(int fd, const std::string& player1_name, int player1_chess_type,
+bool notifyPlayerInfo(SocketFD fd, const std::string& player1_name, int player1_chess_type,
         const std::string& player2_name, int player2_chess_type) {
     Json::Value root;
     root["type"] = "notify";

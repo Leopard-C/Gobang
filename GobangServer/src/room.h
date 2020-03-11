@@ -1,12 +1,13 @@
 #pragma once
 
 #include "base.h"
-#include "thread_pool.h"
 #include "player.h"
+#include "socket_func.h"
+#include "thread_pool.h"
+#include "jsoncpp/json/json.h"
 
 #include <string>
 #include <vector>
-#include "jsoncpp/json/json.h"
 
 #define MAX_NUM_WATCHERS 20
 
@@ -28,14 +29,14 @@ public:
     int getNumWatchers() const { return watchers.size(); }
     bool isFull() const { return watchers.size() >= MAX_NUM_WATCHERS; }
 
-    void addPlayer(const std::string& name, int fd);
-    void addWatcher(const std::string& name, int fd);
-    void quitPlayer(int fd);
-    void quitWatcher(int fd);
+    void addPlayer(const std::string& name, SocketFD fd);
+    void addWatcher(const std::string& name, SocketFD fd);
+    void quitPlayer(SocketFD fd);
+    void quitWatcher(SocketFD fd);
 
     Player& getPlayer1() { return player1; }
     Player& getPlayer2() { return player2; }
-    Player* getPlayer(int fd);
+    Player* getPlayer(SocketFD fd);
     Player* getRival(int my_fd);
 
     bool shouldDelete() const { return flagShouldDelete; }
@@ -43,20 +44,20 @@ public:
 private:
     void setPiece(int row, int col, ChessType type);
 
-    bool parseJsonMsg(const Json::Value& root, int fd);
+    bool parseJsonMsg(const Json::Value& root, SocketFD fd);
 
-    bool processMsgTypeCmd(const Json::Value& root, int fd);
-    bool processMsgTypeResponse(const Json::Value& root, int fd);
-    bool processMsgTypeChat(const Json::Value& root, int fd);
-    bool processMsgTypeNotify(const Json::Value& root, int fd);
+    bool processMsgTypeCmd(const Json::Value& root, SocketFD fd);
+    bool processMsgTypeResponse(const Json::Value& root, SocketFD fd);
+    bool processMsgTypeChat(const Json::Value& root, SocketFD fd);
+    bool processMsgTypeNotify(const Json::Value& root, SocketFD fd);
 
-    bool processNotifyRivalInfo(const Json::Value& root, int fd);
-    bool processPrepareGame(const Json::Value& root, int fd);
-    bool processCancelPrepareGame(const Json::Value& root, int fd);
-    bool processStartGame(const Json::Value& root, int fd);
-    bool processNewPiece(const Json::Value& root, int fd);
-    bool processGameOver(const Json::Value& root, int fd);
-    bool processExchangeChessType(const Json::Value& root, int fd);
+    bool processNotifyRivalInfo(const Json::Value& root, SocketFD fd);
+    bool processPrepareGame(const Json::Value& root, SocketFD fd);
+    bool processCancelPrepareGame(const Json::Value& root, SocketFD fd);
+    bool processStartGame(const Json::Value& root, SocketFD fd);
+    bool processNewPiece(const Json::Value& root, SocketFD fd);
+    bool processGameOver(const Json::Value& root, SocketFD fd);
+    bool processExchangeChessType(const Json::Value& root, SocketFD fd);
 
     enum GameStatus {
         GAME_RUNNING = 1,

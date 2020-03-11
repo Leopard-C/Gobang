@@ -1,12 +1,11 @@
 #include "room.h"
-#include "socket_func.h"
-#include "api.h"
 
+#include "api.h"
 #include "jsoncpp/json/json.h"
 
-#include <string>
-#include <iostream>
 #include <algorithm>
+#include <iostream>
+#include <string>
 
 #define Log(x) std::cout << (x) << std::endl
 
@@ -32,7 +31,7 @@ void Room::setPiece(int row, int col, ChessType type) {
     chessPieces[row][col] = type;
 }
 
-void Room::addPlayer(const std::string& name, int fd) {
+void Room::addPlayer(const std::string& name, SocketFD fd) {
     if (numPlayers == 0) {
         player1 = Player(name, fd, CHESS_BLACK);
         numPlayers++;
@@ -63,7 +62,7 @@ void Room::addPlayer(const std::string& name, int fd) {
     });
 }
 
-void Room::addWatcher(const std::string& name, int fd) {
+void Room::addWatcher(const std::string& name, SocketFD fd) {
     watchers.emplace_back(name, fd);
     API::notifyPlayerInfo(fd, player1.name, player1.type, player2.name, player2.type);
     API::sendChessBoard(fd, this->chessPieces, lastChess);
@@ -99,7 +98,7 @@ void Room::addWatcher(const std::string& name, int fd) {
     });
 }
 
-void Room::quitPlayer(int fd) {
+void Room::quitPlayer(SocketFD fd) {
     std::cout << "quit player" << std::endl;
     std::cout << numPlayers << std::endl;
     // won't happen
@@ -126,10 +125,10 @@ void Room::quitPlayer(int fd) {
     }
 
     std::cout << numPlayers << std::endl;
-    close(fd);
+    closeSocket(fd);
 }
 
-void Room::quitWatcher(int fd) {
+void Room::quitWatcher(SocketFD fd) {
     std::cout << "quit watcher" << std::endl;
     std::cout << watchers.size() << std::endl;
 
@@ -140,11 +139,11 @@ void Room::quitWatcher(int fd) {
         }
     }
 
-    close(fd);
+    closeSocket(fd);
     std::cout << watchers.size() << std::endl;
 }
 
-bool Room::parseJsonMsg(const Json::Value& root, int fd) {
+bool Room::parseJsonMsg(const Json::Value& root, SocketFD fd) {
     if (root["type"].isNull())
         return false;
     std::string msgType = root["type"].asString();
@@ -173,7 +172,7 @@ bool Room::parseJsonMsg(const Json::Value& root, int fd) {
     return false;
 }
 
-bool Room::processMsgTypeCmd(const Json::Value& root, int fd) {
+bool Room::processMsgTypeCmd(const Json::Value& root, SocketFD fd) {
     std::string cmd = root["cmd"].asString();
     if (cmd == "prepare")
         return processPrepareGame(root, fd);
@@ -184,7 +183,7 @@ bool Room::processMsgTypeCmd(const Json::Value& root, int fd) {
     return true;
 }
 
-bool Room::processMsgTypeResponse(const Json::Value& root, int fd) {
+bool Room::processMsgTypeResponse(const Json::Value& root, SocketFD fd) {
     std::string res_cmd = root["res_cmd"].asString();
     if (res_cmd == "prepare") {
         if (root["accept"].isNull())
@@ -198,7 +197,7 @@ bool Room::processMsgTypeResponse(const Json::Value& root, int fd) {
     return API::forward(getRival(fd)->socketfd, root);
 }
 
-bool Room::processMsgTypeChat(const Json::Value& root, int fd) {
+bool Room::processMsgTypeChat(const Json::Value& root, SocketFD fd) {
     for (auto& watcher : watchers) {
         if (watcher.socketfd != fd) {
             API::forward(watcher.socketfd, root);
@@ -208,7 +207,7 @@ bool Room::processMsgTypeChat(const Json::Value& root, int fd) {
 }
 
 
-bool Room::processMsgTypeNotify(const Json::Value& root, int fd) {
+bool Room::processMsgTypeNotify(const Json::Value& root, SocketFD fd) {
     std::string subType = root["sub_type"].asString();
     if (subType == "new_piece")
         return processNewPiece(root, fd);
@@ -219,15 +218,15 @@ bool Room::processMsgTypeNotify(const Json::Value& root, int fd) {
     return false;
 }
 
-bool Room::processNotifyRivalInfo(const Json::Value& root, int fd) {
+bool Room::processNotifyRivalInfo(const Json::Value& root, SocketFD fd) {
     Player* player = getPlayer(fd);
     if (!root["player_name"].isNull())
         player->name = root["player_name"].asString();
 
-    API::forward(getRival(fd)->socketfd, root);
+    return API::forward(getRival(fd)->socketfd, root);
 }
 
-bool Room::processPrepareGame(const Json::Value& root, int fd) {
+bool Room::processPrepareGame(const Json::Value& root, SocketFD fd) {
     Player* player = getPlayer(fd);
 
     if (numPlayers == 2) {
@@ -258,7 +257,7 @@ bool Room::processPrepareGame(const Json::Value& root, int fd) {
     }
 }
 
-bool Room::processCancelPrepareGame(const Json::Value& root, int fd) {
+bool Room::processCancelPrepareGame(const Json::Value& root, SocketFD fd) {
     getPlayer(fd)->prepare = false;
     for (auto& watcher : watchers)
         API::notifyGameCancelPrepare(watcher.socketfd);
@@ -266,7 +265,7 @@ bool Room::processCancelPrepareGame(const Json::Value& root, int fd) {
 }
 
 
-bool Room::processNewPiece(const Json::Value& root, int fd) {
+bool Room::processNewPiece(const Json::Value& root, SocketFD fd) {
     if (root["row"].isNull() || root["col"].isNull() || root["chess_type"].isNull())
         return false;
     int row = root["row"].asInt();
@@ -282,7 +281,7 @@ bool Room::processNewPiece(const Json::Value& root, int fd) {
     return API::notifyNewPiece(getRival(fd)->socketfd, row, col, chessType);
 }
 
-bool Room::processGameOver(const Json::Value& root, int fd) {
+bool Room::processGameOver(const Json::Value& root, SocketFD fd) {
     if (root["game_result"].isNull())
         return false;
 
@@ -297,16 +296,17 @@ bool Room::processGameOver(const Json::Value& root, int fd) {
 
     gameStatus = GAME_END;
     std::cout << "game over" << std::endl;
+    return true;
 }
 
-bool Room::processExchangeChessType(const Json::Value& root, int fd) {
+bool Room::processExchangeChessType(const Json::Value& root, SocketFD fd) {
     if (numPlayers != 2)
         return false;
 
     return API::forward(getRival(fd)->socketfd, root);
 }
 
-Player* Room::getPlayer(int fd) {
+Player* Room::getPlayer(SocketFD fd) {
     if (player1.socketfd == fd)
         return &player1;
     else if (player2.socketfd == fd)

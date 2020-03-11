@@ -1,6 +1,6 @@
 #include "gobangserver.h"
+
 #include <iostream>
-#include <unistd.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <time.h>
@@ -31,3 +31,4 @@ void handleCtrlC(int num) {
 void exitFunc() {
     server.stop();
 }
+

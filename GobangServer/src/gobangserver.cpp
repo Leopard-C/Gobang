@@ -1,14 +1,9 @@
 #include "gobangserver.h"
-#include "socket_func.h"
+
 #include "api.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 
 #include <algorithm>
 #include <chrono>
@@ -19,6 +14,12 @@
 GobangServer::GobangServer() :
     pool(10)
 {
+#ifdef WIN32
+        WORD sockVersion = MAKEWORD(2, 2);
+        WSADATA wsaData;
+        WSAStartup(sockVersion, &wsaData);
+#endif
+
     pool.enqueue([this](){
         while (isRunning) {
             std::cout << "Rooms in use: " << rooms.size() << std::endl;
@@ -47,7 +48,7 @@ void GobangServer::stop() {
     shutdown(socketfd, 2);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     std::cout << "Closing socket" << std::endl;
-    close(socketfd);
+    closeSocket(socketfd);
     isRunning = false;
     std::this_thread::sleep_for(std::chrono::seconds(2));
     std::cout << "Quit successfully" << std::endl;
@@ -68,20 +69,20 @@ bool GobangServer::start(int port) {
 
     if (bind(socketfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) == -1) {
         printf("bind socket error: %s(errno: %d)\n", strerror(errno), errno);
-        close(socketfd);
+        closeSocket(socketfd);
         return false;
     }
 
     if (listen(socketfd, 10) == -1) {
         printf("listen socket error: %s(errno: %d)\n", strerror(errno), errno);
-        close(socketfd);
+        closeSocket(socketfd);
         return false;
     }
 
     printf("Running...\n");
     
-    while (1) {
-        int connectfd = 0;
+    while (isRunning) {
+        SocketFD connectfd = 0;
         if ((connectfd = accept(socketfd, (struct sockaddr*)NULL, NULL)) <= 0) {
             printf("accept socket error %s(errno: %d)\n", strerror(errno), errno);
             continue;
@@ -95,20 +96,19 @@ bool GobangServer::start(int port) {
             std::cout << "Recv Ret: " << ret << std::endl;;
 
             if (ret == -1) {
-                close(connectfd);
+                closeSocket(connectfd);
                 return;
             }
             else if (ret > 0){
                 parseJsonMsg(root, connectfd);
             }
         });
-        
     }
 
     return true;
 }
 
-bool GobangServer::parseJsonMsg(const Json::Value& root, int fd) {
+bool GobangServer::parseJsonMsg(const Json::Value& root, SocketFD fd) {
     if (root["type"].isNull()) {
         return false;
     }
@@ -121,7 +121,7 @@ bool GobangServer::parseJsonMsg(const Json::Value& root, int fd) {
     return true;
 }
 
-bool GobangServer::processMsgTypeCmd(const Json::Value& root, int fd) {
+bool GobangServer::processMsgTypeCmd(const Json::Value& root, SocketFD fd) {
     if (root["cmd"].isNull())
         return false;
 
@@ -138,7 +138,7 @@ bool GobangServer::processMsgTypeCmd(const Json::Value& root, int fd) {
 }
 
 
-bool GobangServer::processCreateRoom(const Json::Value& root, int fd) {
+bool GobangServer::processCreateRoom(const Json::Value& root, SocketFD fd) {
     if (root["room_name"].isNull() || root["player_name"].isNull())
         return false;
     
@@ -150,7 +150,7 @@ bool GobangServer::processCreateRoom(const Json::Value& root, int fd) {
     return API::responseCreateRoom(fd, 0, "OK", room->getId());
 }
 
-bool GobangServer::processJoinRoom(const Json::Value& root, int fd) {
+bool GobangServer::processJoinRoom(const Json::Value& root, SocketFD fd) {
     if (root["room_id"].isNull() || root["player_name"].isNull())
         return false;
 
@@ -204,7 +204,7 @@ bool GobangServer::processJoinRoom(const Json::Value& root, int fd) {
         return false;
 }
 
-bool GobangServer::processWatchRoom(const Json::Value& root, int fd) {
+bool GobangServer::processWatchRoom(const Json::Value& root, SocketFD fd) {
     if (root["room_id"].isNull() || root["player_name"].isNull())
         return false;
 
@@ -222,7 +222,7 @@ bool GobangServer::processWatchRoom(const Json::Value& root, int fd) {
     return true;
 }
 
-bool GobangServer::processDeleteRoom(const Json::Value& root, int fd) {
+bool GobangServer::processDeleteRoom(const Json::Value& root, SocketFD fd) {
 
     return true;
 }

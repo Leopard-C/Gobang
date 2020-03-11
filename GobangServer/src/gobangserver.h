@@ -1,11 +1,12 @@
 #pragma once
 
-#include "thread_pool.h"
-#include <vector>
-
 #include "jsoncpp/json/json.h"
 #include "room.h"
+#include "socket_func.h"
+#include "thread_pool.h"
 
+
+#include <vector>
 
 class GobangServer {
 public:
@@ -18,14 +19,14 @@ public:
 private:
     Room* createRoom();
 
-    bool parseJsonMsg(const Json::Value& root, int fd);
+    bool parseJsonMsg(const Json::Value& root, SocketFD fd);
 
-    bool processMsgTypeCmd(const Json::Value& root, int fd);
+    bool processMsgTypeCmd(const Json::Value& root, SocketFD fd);
 
-    bool processCreateRoom(const Json::Value& root, int fd);
-    bool processJoinRoom(const Json::Value& root, int fd);
-    bool processWatchRoom(const Json::Value& root, int fd);
-    bool processDeleteRoom(const Json::Value& root, int fd);
+    bool processCreateRoom(const Json::Value& root, SocketFD fd);
+    bool processJoinRoom(const Json::Value& root, SocketFD fd);
+    bool processWatchRoom(const Json::Value& root, SocketFD fd);
+    bool processDeleteRoom(const Json::Value& root, SocketFD fd);
 
     Room* getRoomById(int id);
 
@@ -35,7 +36,7 @@ private:
     std::vector<Room*> rooms;
     std::vector<int> roomsId;
 
-    int socketfd = 0;
+    SocketFD socketfd = 0;
 
     bool isRunning = true;
 };
